@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../providers.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -431,6 +432,9 @@ class _ReminderSelfCheckPageState extends ConsumerState<ReminderSelfCheckPage> {
   bool? _exactAlarm;
   bool? _battery;
 
+  /// 任一项检测抛出异常时为 true，提示用户手动检查而非误报「未开启」。
+  bool _checkError = false;
+
   @override
   void initState() {
     super.initState();
@@ -439,17 +443,34 @@ class _ReminderSelfCheckPageState extends ConsumerState<ReminderSelfCheckPage> {
 
   Future<void> _check() async {
     final service = ref.read(notificationServiceProvider);
+    bool anyError = false;
     final results = await Future.wait([
-      service.hasNotificationPermission(),
-      service.hasExactAlarmPermission(),
-      service.hasIgnoreBatteryOptimizations(),
+      _guard(service.hasNotificationPermission(), () => anyError = true),
+      _guard(service.hasExactAlarmPermission(), () => anyError = true),
+      _guard(service.hasIgnoreBatteryOptimizations(), () => anyError = true),
     ]);
     if (!mounted) return;
     setState(() {
       _notifications = results[0];
       _exactAlarm = results[1];
       _battery = results[2];
+      _checkError = anyError;
     });
+  }
+
+  Future<bool?> _guard(Future<bool> future, VoidCallback onError) async {
+    try {
+      return await future;
+    } catch (e) {
+      debugPrint('自检单项失败：$e');
+      onError();
+      return null;
+    }
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -465,24 +486,40 @@ class _ReminderSelfCheckPageState extends ConsumerState<ReminderSelfCheckPage> {
           _CheckTile(
             title: '通知权限',
             ok: _notifications,
+            error: _checkError,
             onFix: () async {
-              await service.requestNotificationPermission();
+              try {
+                await service.requestNotificationPermission();
+              } catch (e) {
+                _snack('请求通知权限失败：$e');
+              }
               await _check();
             },
           ),
           _CheckTile(
             title: '精确闹钟权限',
             ok: _exactAlarm,
+            error: _checkError,
             onFix: () async {
-              await service.requestExactAlarmPermission();
+              try {
+                await service.requestExactAlarmPermission();
+              } catch (e) {
+                _snack('请求精确闹钟权限失败：$e');
+              }
               await _check();
             },
           ),
           _CheckTile(
             title: '忽略电池优化',
             ok: _battery,
+            error: _checkError,
             onFix: () async {
-              await service.requestIgnoreBatteryOptimizations();
+              try {
+                await service.requestIgnoreBatteryOptimizations();
+              } catch (e) {
+                _snack('请求失败：$e');
+              }
+              _snack('会跳转系统设置页，请手动允许后返回，再点「重新检测」');
               await _check();
             },
           ),
@@ -495,19 +532,29 @@ class _ReminderSelfCheckPageState extends ConsumerState<ReminderSelfCheckPage> {
 }
 
 class _CheckTile extends StatelessWidget {
-  const _CheckTile({required this.title, required this.ok, required this.onFix});
+  const _CheckTile({
+    required this.title,
+    required this.ok,
+    required this.onFix,
+    this.error = false,
+  });
 
   final String title;
   final bool? ok;
   final Future<void> Function() onFix;
+  final bool error;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final status = ok == null ? '检测中…' : (ok! ? '已开启' : '未开启');
-    final color = ok == null
-        ? theme.colorScheme.outline
-        : (ok! ? theme.colorScheme.primary : theme.colorScheme.error);
+    final status = error
+        ? '检测异常（请手动检查）'
+        : (ok == null ? '检测中…' : (ok! ? '已开启' : '未开启'));
+    final color = error
+        ? AppColors.attention
+        : (ok == null
+            ? theme.colorScheme.outline
+            : (ok! ? theme.colorScheme.primary : theme.colorScheme.error));
 
     return Card(
       child: ListTile(
