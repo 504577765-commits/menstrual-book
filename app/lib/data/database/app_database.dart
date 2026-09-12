@@ -50,9 +50,11 @@ class AppDatabase {
       // 否则 cycle_day 的 ON DELETE CASCADE 不会生效，删除经期后会残留孤儿行。
       // busy_timeout：SQLCipher 在并发/残留写锁时默认立即报 "database is locked"，
       // 设超时让被锁住的写入等待释放，避免首次写入偶发失败。
+      // 注意：SQLCipher 下 execute() 对部分 PRAGMA 受限（"query or rawQuery only"），
+      // 这里统一用 rawQuery 执行，保证兼容。
       onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys = ON');
-        await db.execute('PRAGMA busy_timeout = 10000');
+        await db.rawQuery('PRAGMA foreign_keys = ON');
+        await db.rawQuery('PRAGMA busy_timeout = 10000');
       },
       onCreate: (db, version) async {
         final batch = db.batch();

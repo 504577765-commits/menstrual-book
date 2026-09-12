@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../providers.dart';
 import '../state/app_state.dart';
@@ -245,11 +246,7 @@ class SettingsPage extends ConsumerWidget {
           const _SectionCard(
             title: '关于',
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text('版本'),
-                trailing: Text('1.0.0'),
-              ),
+              _VersionTile(),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text('免责声明'),
@@ -260,6 +257,39 @@ class SettingsPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 运行时读取 pubspec.yaml 中的版本号（单一来源）并展示。
+class _VersionTile extends StatefulWidget {
+  const _VersionTile();
+
+  @override
+  State<_VersionTile> createState() => _VersionTileState();
+}
+
+class _VersionTileState extends State<_VersionTile> {
+  String _version = '…';
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) {
+        setState(() => _version = '${info.version}+${info.buildNumber}');
+      }
+    }).catchError((Object _) {
+      // 读不到时保持占位，不影响页面其它功能。
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('版本'),
+      trailing: Text(_version),
     );
   }
 }
