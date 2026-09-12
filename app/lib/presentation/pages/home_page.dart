@@ -57,17 +57,32 @@ class _HomePageState extends ConsumerState<HomePage> {
             onNotYet: () => _snack(context, '好的，明天再问你一次'),
           ),
           const SizedBox(height: 18),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: MonthCalendar(
-                month: _month,
-                cycles: state.cycles,
-                prediction: prediction,
-                today: state.today,
-                selectedStart: _pendingStart,
-                onChangeMonth: (m) => setState(() => _month = m),
-                onDayTap: (date) => _showDaySheet(context, ref, date),
+          // 月份切换时整块月历淡入 + 轻微右滑过渡。
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 320),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0.05, 0), end: Offset.zero)
+                    .animate(animation),
+                child: child,
+              ),
+            ),
+            child: Card(
+              key: ValueKey('month-${_month.year}-${_month.month}'),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: MonthCalendar(
+                  month: _month,
+                  cycles: state.cycles,
+                  prediction: prediction,
+                  today: state.today,
+                  selectedStart: _pendingStart,
+                  onChangeMonth: (m) => setState(() => _month = m),
+                  onDayTap: (date) => _showDaySheet(context, ref, date),
+                ),
               ),
             ),
           ),

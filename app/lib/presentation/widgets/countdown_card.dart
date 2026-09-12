@@ -59,10 +59,29 @@ class CountdownCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            _BigValue(
-              ongoing: ongoing,
-              prediction: prediction,
-              fmt: _fmt,
+            // 数字变化时淡入淡出 + 轻微缩放
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween(begin: 0.96, end: 1.0).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: KeyedSubtree(
+                key: ValueKey(
+                  '${prediction.state}-${prediction.ongoingDayIndex}-'
+                  '${prediction.overdueDays}-${prediction.daysUntilNext}',
+                ),
+                child: _BigValue(
+                  ongoing: ongoing,
+                  prediction: prediction,
+                  fmt: _fmt,
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             if (ongoing)

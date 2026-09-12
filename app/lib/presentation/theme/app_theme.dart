@@ -80,6 +80,57 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
+      // —— 弹窗 / 提示 / 路由：统一圆角与顺滑过渡 ——
+      dialogTheme: DialogThemeData(
+        backgroundColor: brightness == Brightness.light
+            ? AppColors.surfaceLight
+            : scheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor:
+            brightness == Brightness.light ? const Color(0xFF3A3035) : scheme.inverseSurface,
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w500,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: brightness == Brightness.light
+            ? AppColors.surfaceLight
+            : scheme.surfaceContainerHigh,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(sheetRadius),
+          ),
+        ),
+        showDragHandle: true,
+        dragHandleColor: scheme.outlineVariant,
+      ),
+      datePickerTheme: DatePickerThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          // fadeUpwards 温和的淡入上滑，比 M3 默认缩放过渡更柔和。
+          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+        },
+      ),
+      splashFactory: InkSparkle.splashFactory,
     );
   }
 }

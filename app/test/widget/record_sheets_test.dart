@@ -119,26 +119,6 @@ void main() {
       expect(host.result!.flow, 2);
     });
 
-    testWidgets('清空当日返回空值', (tester) async {
-      final host = await openSheet<DayDetailResult>(
-        tester,
-        DayDetailSheet(
-          date: DateTime(2026, 3, 20),
-          initialFlow: 2,
-          initialCramp: 3,
-          fallbackFlow: 1,
-          fallbackCramp: 0,
-        ),
-      );
-
-      await tester.tap(find.text('清空当日'));
-      await tester.pumpAndSettle();
-
-      expect(host.result!.flow, isNull);
-      expect(host.result!.cramp, isNull);
-      expect(host.result!.isNoop, isFalse);
-    });
-
     testWidgets('大字号（1.4 倍）下不溢出', (tester) async {
       await openSheet<DayDetailResult>(
         tester,

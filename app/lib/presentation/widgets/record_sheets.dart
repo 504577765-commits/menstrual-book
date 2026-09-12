@@ -250,32 +250,21 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
           }),
         ),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () =>
-                    Navigator.pop(context, const DayDetailResult(null, null)),
-                child: const Text('清空当日'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                onPressed: () {
-                  final untouched = !_flowTouched && !_crampTouched;
-                  final wasEmpty =
-                      widget.initialFlow == null && widget.initialCramp == null;
-                  if (untouched && wasEmpty) {
-                    Navigator.pop(context, const DayDetailResult.noop());
-                    return;
-                  }
-                  Navigator.pop(context, DayDetailResult(_flow, _cramp));
-                },
-                child: const Text('保存'),
-              ),
-            ),
-          ],
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () {
+              final untouched = !_flowTouched && !_crampTouched;
+              final wasEmpty =
+                  widget.initialFlow == null && widget.initialCramp == null;
+              if (untouched && wasEmpty) {
+                Navigator.pop(context, const DayDetailResult.noop());
+                return;
+              }
+              Navigator.pop(context, DayDetailResult(_flow, _cramp));
+            },
+            child: const Text('保存'),
+          ),
         ),
       ],
     );
@@ -420,26 +409,39 @@ class SheetScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        4,
-        20,
-        20 + MediaQuery.viewInsetsOf(context).bottom,
+    // 入场动画：内容淡入 + 轻微上移，让弹层打开更柔和。
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(
+          offset: Offset(0, 10 * (1 - t)),
+          child: child,
+        ),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: theme.textTheme.titleLarge),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(subtitle!, style: theme.textTheme.bodySmall),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          4,
+          20,
+          20 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: theme.textTheme.titleLarge),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(subtitle!, style: theme.textTheme.bodySmall),
+              ],
+              const SizedBox(height: 16),
+              ...children,
             ],
-            const SizedBox(height: 16),
-            ...children,
-          ],
+          ),
         ),
       ),
     );
