@@ -31,7 +31,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('月经本'),
+        title: const Text('潮汐'),
         actions: [
           IconButton(
             tooltip: '回到本月',

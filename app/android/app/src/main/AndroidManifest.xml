@@ -14,7 +14,7 @@
     <!-- 注意：本应用为纯本地应用，刻意不申请 INTERNET 权限 -->
 
     <application
-        android:label="月经本"
+        android:label="潮汐"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

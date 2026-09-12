@@ -38,7 +38,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 children: [
                   const _IntroSlide(
                     icon: Icons.event_note_outlined,
-                    title: '月经本',
+                    title: '潮汐',
                     body: '不用天天打卡。经期来和走时各记一次，就够了。',
                   ),
                   const _IntroSlide(

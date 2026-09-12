@@ -57,7 +57,7 @@ class _YuejingBenAppState extends ConsumerState<YuejingBenApp> {
     final state = ref.watch(appStateProvider);
 
     return MaterialApp(
-      title: '月经本',
+      title: '潮汐',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
@@ -114,7 +114,7 @@ class _RootShellState extends State<RootShell> {
         final exit = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('要退出月经本吗？'),
+            title: const Text('要退出潮汐吗？'),
             content: const Text('你的记录都保存在本机，退出不会丢失数据。'),
             actions: [
               TextButton(

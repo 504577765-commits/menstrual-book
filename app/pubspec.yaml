@@ -1,5 +1,5 @@
 name: menstrual_book
-description: "月经本：经期周期记录与预测的本地私密 App。经期来和走各记一次即可，自动推算下期并提前提醒；数据整库加密、不上传、无账号，支持指纹/面容加锁。"
+description: "潮汐：经期周期记录与预测的本地私密 App。经期来和走各记一次即可，自动推算下期并提前提醒；数据整库加密、不上传、无账号，支持指纹/面容加锁。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

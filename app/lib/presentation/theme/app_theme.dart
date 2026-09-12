@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 
-/// 温柔治愈系视觉：低饱和暖粉 + 大留白 + 圆润卡片。
+/// 温柔治愈系视觉：低饱和浅绿 + 大留白 + 圆润卡片。
 ///
-/// 注意：主色刻意不使用高饱和粉，以保证强光下的文字对比度，
+/// 注意：主色刻意不使用高饱和绿，以保证强光下的文字对比度，
 /// 并避免与「流量分级配色」争夺视觉通道（流量改用图标数量编码）。
 class AppColors {
-  static const seed = Color(0xFFE8A0B4);
-  static const backgroundLight = Color(0xFFFFF8F9);
+  static const seed = Color(0xFF8FBC9F);
+  static const backgroundLight = Color(0xFFF4FAF6);
   static const surfaceLight = Color(0xFFFFFFFF);
 
-  /// 实际经期（已记录）。
-  static const period = Color(0xFFD4678A);
+  /// 实际经期（已记录）：深绿，与浅绿预测色保持可区分。
+  static const period = Color(0xFF4E8C6A);
 
-  /// 预测经期。
-  static const predicted = Color(0xFFF0A9C0);
+  /// 预测经期：浅绿。
+  static const predicted = Color(0xFFA9D6B5);
 
-  /// 排卵期 / 易孕窗口（低饱和，弱于经期色）。
-  static const fertile = Color(0xFFB8A5D6);
+  /// 排卵期 / 易孕窗口（薄荷青，低饱和，弱于经期色）。
+  static const fertile = Color(0xFF8FC8C0);
 
-  /// 异常关注提示（琥珀，不使用红色告警）。
-  static const attention = Color(0xFFE0A24A);
+  /// 异常关注提示（黄绿，不使用红色告警）。
+  static const attention = Color(0xFFBCA84E);
 }
 
 class AppTheme {

@@ -66,7 +66,7 @@ class _LockGateState extends ConsumerState<LockGate> with WidgetsBindingObserver
     setState(() => _authenticating = true);
 
     final lock = ref.read(lockServiceProvider);
-    final ok = await lock.authenticate(reason: '解锁月经本');
+    final ok = await lock.authenticate(reason: '解锁潮汐');
 
     if (!mounted) return;
     setState(() {
@@ -140,7 +140,7 @@ class _LockGateState extends ConsumerState<LockGate> with WidgetsBindingObserver
                 color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(height: 16),
-              Text('月经本已锁定', style: Theme.of(context).textTheme.titleMedium),
+              Text('潮汐已锁定', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
                 '使用指纹 / 面容解锁，不可用时将回退到手机锁屏密码。',

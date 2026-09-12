@@ -91,7 +91,7 @@ List<PlannedReminder> buildReminderPlan({
       add(
         ReminderKind.periodStart,
         '预计今天开始',
-        '如果已经来了，记得在「月经本」里点一下记录。',
+        '如果已经来了，记得在「潮汐」里点一下记录。',
         nextStart,
       );
     }
