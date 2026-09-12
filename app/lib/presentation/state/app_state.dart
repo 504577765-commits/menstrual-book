@@ -199,20 +199,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setDefaultCycleLen(int value) async {
-    _defaultCycleLen = value.clamp(21, 35);
-    await _settingsRepo.setInt(SettingKeys.defaultCycleLen, _defaultCycleLen);
-    await _rescheduleReminders();
-    notifyListeners();
-  }
-
-  Future<void> setDefaultPeriodLen(int value) async {
-    _defaultPeriodLen = value.clamp(2, 8);
-    await _settingsRepo.setInt(SettingKeys.defaultPeriodLen, _defaultPeriodLen);
-    await _rescheduleReminders();
-    notifyListeners();
-  }
-
   /// 记录一次经期。
   ///
   /// [ongoing] = true：今天开始、尚未结束，endDate 留空；

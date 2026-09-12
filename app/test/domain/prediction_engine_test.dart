@@ -201,4 +201,20 @@ void main() {
       expect(r.fertileEnd, DateTime(2026, 3, 11));
     });
   });
+
+  group('统计优化', () {
+    test('经期天数取中位数：极长的一次不拉偏平均', () {
+      final r = engine.predict(PredictionInput(
+        cycles: [
+          c(DateTime(2026, 1, 1), end: DateTime(2026, 1, 5)), // 5 天
+          c(DateTime(2026, 2, 5), end: DateTime(2026, 2, 9)), // 5 天
+          c(DateTime(2026, 3, 5), end: DateTime(2026, 3, 13)), // 9 天
+        ],
+        today: DateTime(2026, 4, 1),
+      ));
+
+      // 中位数 5；若用均值会得到 6
+      expect(r.avgPeriodLen, 5);
+    });
+  });
 }

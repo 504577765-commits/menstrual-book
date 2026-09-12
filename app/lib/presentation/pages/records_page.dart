@@ -37,13 +37,14 @@ class RecordsPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmDelete(
+  /// 请求删除一条记录。返回 true 表示已在数据层删除成功（可让滑动条真正滑走）。
+  Future<bool> _confirmDelete(
     BuildContext context,
     WidgetRef ref,
     Cycle cycle,
   ) async {
     final id = cycle.id;
-    if (id == null) return;
+    if (id == null) return false;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -61,19 +62,21 @@ class RecordsPage extends ConsumerWidget {
         ],
       ),
     );
-    if (ok == true) {
-      try {
-        await ref.read(appStateProvider).deleteCycle(id);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('已删除这条记录')));
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('删除失败：$e')));
-        }
+    if (ok != true || !context.mounted) return false;
+
+    try {
+      await ref.read(appStateProvider).deleteCycle(id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('已删除这条记录')));
       }
+      return true;
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('删除失败：$e')));
+      }
+      return false;
     }
   }
 
@@ -130,7 +133,9 @@ class _CycleTile extends StatelessWidget {
   final Cycle cycle;
   final int dayCount;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
+
+  /// 删除回调：返回 true 表示删除成功（条目滑出），false 表示回弹。
+  final Future<bool> Function() onDelete;
 
   String _fmt(DateTime d) => '${d.year}/${d.month.toString().padLeft(2, '0')}/'
       '${d.day.toString().padLeft(2, '0')}';
@@ -144,8 +149,8 @@ class _CycleTile extends StatelessWidget {
       key: ValueKey('cycle-${cycle.id}'),
       direction: DismissDirection.endToStart,
       confirmDismiss: (_) async {
-        onDelete();
-        return false;
+        // 确认并删除成功后返回 true（条目真正滑出），否则回弹。
+        return onDelete();
       },
       background: Container(
         alignment: Alignment.centerRight,

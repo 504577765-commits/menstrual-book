@@ -18,28 +18,6 @@ class SettingsPage extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _SectionCard(
-            title: '周期参数',
-            children: [
-              _SliderTile(
-                label: '通常周期长度',
-                value: state.defaultCycleLen.toDouble(),
-                min: 21,
-                max: 35,
-                suffix: '天',
-                onChanged: (v) => state.setDefaultCycleLen(v.round()),
-              ),
-              _SliderTile(
-                label: '通常经期天数',
-                value: state.defaultPeriodLen.toDouble(),
-                min: 2,
-                max: 8,
-                suffix: '天',
-                onChanged: (v) => state.setDefaultPeriodLen(v.round()),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _SectionCard(
             title: '提醒',
             children: [
               SwitchListTile(

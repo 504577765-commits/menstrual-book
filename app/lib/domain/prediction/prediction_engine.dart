@@ -233,12 +233,19 @@ class PredictionEngine {
 
   int _periodAverage(List<int> lens, int fallback) {
     if (lens.isEmpty) return fallback;
-    return _mean(lens).round().clamp(1, 15);
+    // 中位数比均值更稳：单次极长/极短的经期不会显著拉偏整体判断。
+    final sorted = [...lens]..sort();
+    final mid = sorted.length ~/ 2;
+    final median = sorted.length.isOdd
+        ? sorted[mid]
+        : ((sorted[mid - 1] + sorted[mid]) / 2).round();
+    return median.clamp(1, 15);
   }
 
   double _mean(List<int> values) => values.reduce((a, b) => a + b) / values.length;
 
-  /// 去掉最大最小值后按时间加权（越近权重越高）。
+  /// 去掉最大最小值后按时间指数加权（越近权重越高，1x/2x/4x/8x…）。
+  /// 相比线性加权更强调近期样本，对最近习惯变化更敏感。
   int _trimmedWeighted(List<int> values) {
     var vals = <int>[...values];
     if (vals.length >= 3) {
@@ -250,7 +257,7 @@ class PredictionEngine {
     var sum = 0.0;
     var weightSum = 0.0;
     for (var i = 0; i < vals.length; i++) {
-      final w = (i + 1).toDouble();
+      final w = (1 << i).toDouble(); // 1,2,4,8,…
       sum += vals[i] * w;
       weightSum += w;
     }
