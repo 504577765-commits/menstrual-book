@@ -17,8 +17,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   int _page = 0;
 
   DateTime? _lastStart;
-  int _cycleLen = 28;
-  int _periodLen = 5;
   bool _finishing = false;
 
   @override
@@ -57,8 +55,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   ),
                   _SetupSlide(
                     lastStart: _lastStart,
-                    cycleLen: _cycleLen,
-                    periodLen: _periodLen,
                     onPickDate: () async {
                       final picked = await showDatePicker(
                         context: context,
@@ -68,8 +64,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       );
                       if (picked != null) setState(() => _lastStart = picked);
                     },
-                    onCycleChanged: (v) => setState(() => _cycleLen = v.round()),
-                    onPeriodChanged: (v) => setState(() => _periodLen = v.round()),
                   ),
                 ],
               ),
@@ -139,8 +133,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
     await ref.read(appStateProvider).completeOnboarding(
           lastStart: _lastStart,
-          cycleLen: _cycleLen,
-          periodLen: _periodLen,
+          // 周期/经期参数不再由用户填写：冷启动用固定默认（28 天 / 5 天），
+          // 有记录后预测完全由历史数据决定。
+          cycleLen: 28,
+          periodLen: 5,
         );
   }
 }
@@ -174,19 +170,11 @@ class _IntroSlide extends StatelessWidget {
 class _SetupSlide extends StatelessWidget {
   const _SetupSlide({
     required this.lastStart,
-    required this.cycleLen,
-    required this.periodLen,
     required this.onPickDate,
-    required this.onCycleChanged,
-    required this.onPeriodChanged,
   });
 
   final DateTime? lastStart;
-  final int cycleLen;
-  final int periodLen;
   final VoidCallback onPickDate;
-  final ValueChanged<double> onCycleChanged;
-  final ValueChanged<double> onPeriodChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +185,8 @@ class _SetupSlide extends StatelessWidget {
         Text('最后一步', style: theme.textTheme.headlineSmall),
         const SizedBox(height: 8),
         Text(
-          '填两个数字，首次预测就能贴近你的实际情况。',
+          '填一下上次经期开始日，首次预测就能贴近你的实际情况；'
+          '不填也能先开始用。',
           style: theme.textTheme.bodyMedium,
         ),
         const SizedBox(height: 24),
@@ -212,33 +201,6 @@ class _SetupSlide extends StatelessWidget {
             trailing: const Icon(Icons.edit_calendar_outlined),
             onTap: onPickDate,
           ),
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(child: Text('通常周期长度', style: theme.textTheme.bodyMedium)),
-            Text('$cycleLen 天', style: theme.textTheme.labelLarge),
-          ],
-        ),
-        Slider(
-          value: cycleLen.toDouble(),
-          min: 21,
-          max: 35,
-          divisions: 14,
-          onChanged: onCycleChanged,
-        ),
-        Row(
-          children: [
-            Expanded(child: Text('通常经期天数', style: theme.textTheme.bodyMedium)),
-            Text('$periodLen 天', style: theme.textTheme.labelLarge),
-          ],
-        ),
-        Slider(
-          value: periodLen.toDouble(),
-          min: 2,
-          max: 8,
-          divisions: 6,
-          onChanged: onPeriodChanged,
         ),
       ],
     );
