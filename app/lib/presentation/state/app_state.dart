@@ -242,16 +242,32 @@ class AppState extends ChangeNotifier {
     );
     if (error != null) return error;
 
+    // 写入是唯一的“是否保存成功”判定点；后续刷新/提醒重排一律容错，
+    // 任何后置步骤失败都不覆盖保存成功的结果，且保证 UI 立即刷新。
     await _cycleRepo.insertCycle(Cycle(
       startDate: startDate,
       endDate: end,
       overallFlow: overallFlow,
       overallCramp: overallCramp,
     ));
-    await _reloadCycles();
-    await _rescheduleReminders();
-    notifyListeners();
+    await _safeRefresh();
     return null;
+  }
+
+  /// 全部写操作共用：刷新数据 + 重排提醒 + 通知 UI。
+  /// 刷新失败只降级为日志，绝不让一次成功的写入向上抛错。
+  Future<void> _safeRefresh() async {
+    try {
+      await _reloadCycles();
+    } catch (error) {
+      debugPrint('刷新经期数据失败：$error');
+    }
+    try {
+      await _rescheduleReminders();
+    } catch (error) {
+      debugPrint('重排提醒失败：$error');
+    }
+    notifyListeners();
   }
 
   /// 结束当前进行中的经期。
@@ -260,23 +276,17 @@ class AppState extends ChangeNotifier {
     if (ongoing == null) return;
     final safeEnd = endDate.isBefore(ongoing.startDate) ? ongoing.startDate : endDate;
     await _cycleRepo.updateCycle(ongoing.copyWith(endDate: safeEnd));
-    await _reloadCycles();
-    await _rescheduleReminders();
-    notifyListeners();
+    await _safeRefresh();
   }
 
   Future<void> updateCycle(Cycle cycle) async {
     await _cycleRepo.updateCycle(cycle);
-    await _reloadCycles();
-    await _rescheduleReminders();
-    notifyListeners();
+    await _safeRefresh();
   }
 
   Future<void> deleteCycle(int id) async {
     await _cycleRepo.deleteCycle(id);
-    await _reloadCycles();
-    await _rescheduleReminders();
-    notifyListeners();
+    await _safeRefresh();
   }
 
   /// 写入/清空某天的流量与痛经（选填）。
@@ -305,8 +315,7 @@ class AppState extends ChangeNotifier {
         crampLevel: cramp,
       ));
     }
-    await _reloadCycles();
-    notifyListeners();
+    await _safeRefresh();
   }
 
   Future<void> updateReminders(ReminderSettings value) async {
@@ -321,7 +330,11 @@ class AppState extends ChangeNotifier {
     await _settingsRepo.setBool(SettingKeys.dndEnabled, value.dndEnabled);
     await _settingsRepo.setInt(SettingKeys.dndStartHour, value.dndStartHour);
     await _settingsRepo.setInt(SettingKeys.dndEndHour, value.dndEndHour);
-    await _rescheduleReminders();
+    try {
+      await _rescheduleReminders();
+    } catch (error) {
+      debugPrint('重排提醒失败：$error');
+    }
     notifyListeners();
   }
 
