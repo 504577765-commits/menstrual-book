@@ -46,15 +46,22 @@ class AppDatabase {
       path,
       password: password,
       version: schemaVersion,
-      // sqflite 默认不开启外键约束，必须显式打开，
-      // 否则 cycle_day 的 ON DELETE CASCADE 不会生效，删除经期后会残留孤儿行。
-      // busy_timeout：SQLCipher 在并发/残留写锁时默认立即报 "database is locked"，
-      // 设超时让被锁住的写入等待释放，避免首次写入偶发失败。
-      // 注意：SQLCipher 下 execute() 对部分 PRAGMA 受限（"query or rawQuery only"），
-      // 这里统一用 rawQuery 执行，保证兼容。
-      onConfigure: (db) async {
-        await db.rawQuery('PRAGMA foreign_keys = ON');
-        await db.rawQuery('PRAGMA busy_timeout = 10000');
+      // sqflite_sqlcipher 对 onConfigure 阶段执行 PRAGMA 有额外限制
+      //（execute/rawQuery 均可能抛 "query or rawQuery methods only"），
+      // 因此把 PRAGMA 全部移到 onOpen 阶段执行，并做容错：
+      // 即使 PRAGMA 失败也只降级（如并发写无等待），不影响数据库打开。
+      onConfigure: (_) async {},
+      onOpen: (db) async {
+        try {
+          // 外键约束：cycle_day 的 ON DELETE CASCADE 依赖它，
+          // 否则删除经期后会残留孤儿行。
+          await db.rawQuery('PRAGMA foreign_keys = ON');
+          // 写入等待：SQLCipher 在并发/残留写锁时默认立即报 locked，
+          // 设超时让被锁住的写入等待释放，避免首次写入偶发失败。
+          await db.rawQuery('PRAGMA busy_timeout = 10000');
+        } catch (_) {
+          // 容错：PRAGMA 失败不阻断数据库打开。
+        }
       },
       onCreate: (db, version) async {
         final batch = db.batch();
