@@ -1,0 +1,37 @@
+# 本机工具链（Flutter SDK / Android SDK），不入库
+.tooling/
+
+# 构建产物与本地状态
+downloads/*.apk
+.flutter_tool_state
+*.log
+
+# TRAE 工作区内部数据
+.workbuddy/
+
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.packages
+app/pubspec.lock
+
+# Android
+app/android/.gradle/
+app/android/build/
+app/android/local.properties
+app/android/app/debug/
+app/android/app/release/
+app/android/key.properties
+*.jks
+*.keystore
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
