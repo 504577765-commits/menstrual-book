@@ -20,6 +20,9 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   late DateTime _month = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
+  /// 两段式补录：第一次点击选定的开始日（再点一次可取消）。
+  DateTime? _pendingStart;
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(appStateProvider);
@@ -62,6 +65,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 cycles: state.cycles,
                 prediction: prediction,
                 today: state.today,
+                selectedStart: _pendingStart,
                 onChangeMonth: (m) => setState(() => _month = m),
                 onDayTap: (date) => _showDaySheet(context, ref, date),
               ),
@@ -102,6 +106,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _showStartSheet(BuildContext context, WidgetRef ref) async {
+    // 从其它入口记录时，清空未完成的补录待选状态，避免误结算。
+    if (_pendingStart != null) setState(() => _pendingStart = null);
     final state = ref.read(appStateProvider);
     final result = await Navigator.of(context).push<StartPeriodResult>(
       sheetRoute(StartPeriodSheet(today: state.today)),
@@ -138,22 +144,48 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
 
     if (owner == null) {
-      // 点即补录：不在任何经期内的日期，直接记为完整的一天（默认流量中/无痛经），
-      // 不做确认框，也不做成"进行中"，避免留下永不结束的经期记录。
-      // 命中已有经期的日期会走上面的 DayDetailSheet 分支（可覆盖当天详情）。
-      final isToday = isSameDay(date, state.today);
-      try {
-        final error = await state.startPeriod(
-          startDate: date,
-          overallFlow: FlowLevel.medium,
-          overallCramp: CrampLevel.none,
-          ongoing: isToday,
-        );
-        if (!context.mounted) return;
+      // 两段式补录：
+      // 第一次点击选定开始日（再次点击同一天可取消）；
+      // 第二次点击选定结束日，随后弹出面板选择整体流量与痛经后保存。
+      final pending = _pendingStart;
+      if (pending == null) {
+        setState(() => _pendingStart = date);
         _snack(
           context,
-          error ?? (isToday ? '已补录今天的经期' : '已补录为经期一天，可在「记录」里补充'),
+          '已选 ${formatDate(date)} 为开始日，再点一天作为结束日（再次点该日可取消）',
         );
+        return;
+      }
+
+      setState(() => _pendingStart = null);
+      if (isSameDay(date, pending)) {
+        _snack(context, '已取消补录');
+        return;
+      }
+
+      final start = date.isBefore(pending) ? date : pending;
+      final end = date.isBefore(pending) ? pending : date;
+      final result = await Navigator.of(context).push<BackfillResult>(
+        sheetRoute(BackfillSheet(
+          start: start,
+          end: end,
+          others: state.cycles,
+          today: state.today,
+        )),
+      );
+      if (result == null || !context.mounted) return;
+
+      try {
+        final days = end.difference(start).inDays + 1;
+        final error = await state.startPeriod(
+          startDate: result.start,
+          overallFlow: result.flow,
+          overallCramp: result.cramp,
+          ongoing: false,
+          endDate: result.end,
+        );
+        if (!context.mounted) return;
+        _snack(context, error ?? '已补录为经期 $days 天');
       } catch (e) {
         if (!context.mounted) return;
         _snack(context, '补录失败：$e');

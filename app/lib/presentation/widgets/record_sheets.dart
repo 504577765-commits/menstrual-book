@@ -39,7 +39,95 @@ class EditCycleResult {
   final int cramp;
 }
 
+/// 两段式补录（先选开始日、再选结束日）后弹出的补录面板返回结果。
+class BackfillResult {
+  const BackfillResult(this.start, this.end, this.flow, this.cramp);
+
+  final DateTime start;
+  final DateTime end;
+  final int flow;
+  final int cramp;
+}
+
 String formatDate(DateTime d) => '${d.year} 年 ${d.month} 月 ${d.day} 日';
+
+/// 两段式补录面板：展示所选区间，选择整体流量与痛经后保存。
+class BackfillSheet extends StatefulWidget {
+  const BackfillSheet({
+    super.key,
+    required this.start,
+    required this.end,
+    required this.others,
+    required this.today,
+  });
+
+  final DateTime start;
+  final DateTime end;
+
+  /// 除本次补录外的其余记录，用于重叠校验。
+  final List<Cycle> others;
+  final DateTime today;
+
+  @override
+  State<BackfillSheet> createState() => _BackfillSheetState();
+}
+
+class _BackfillSheetState extends State<BackfillSheet> {
+  late int _flow = FlowLevel.medium;
+  late int _cramp = CrampLevel.none;
+  String? _error;
+
+  int get _days => widget.end.difference(widget.start).inDays + 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SheetScaffold(
+      title: '补录经期',
+      subtitle:
+          '${formatDate(widget.start)} 至 ${formatDate(widget.end)}，共 $_days 天',
+      children: [
+        if (_error != null) ...[
+          const SizedBox(height: 4),
+          Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+        ],
+        const SizedBox(height: 8),
+        Text('整体流量', style: theme.textTheme.labelLarge),
+        const SizedBox(height: 8),
+        FlowSelector(value: _flow, onChanged: (v) => setState(() => _flow = v)),
+        const SizedBox(height: 16),
+        Text('整体痛经程度', style: theme.textTheme.labelLarge),
+        const SizedBox(height: 8),
+        CrampSelector(value: _cramp, onChanged: (v) => setState(() => _cramp = v)),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () {
+              final error = validateCycleRange(
+                cycles: widget.others,
+                start: widget.start,
+                end: widget.end,
+                today: widget.today,
+                allowOngoing: false,
+              );
+              if (error != null) {
+                setState(() => _error = error);
+                return;
+              }
+              setState(() => _error = null);
+              Navigator.pop(
+                context,
+                BackfillResult(widget.start, widget.end, _flow, _cramp),
+              );
+            },
+            child: const Text('保存补录'),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 /// 记录一次经期：日期 + 整次流量/痛经概览。
 class StartPeriodSheet extends StatefulWidget {

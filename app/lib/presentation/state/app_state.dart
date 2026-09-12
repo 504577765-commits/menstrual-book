@@ -216,7 +216,7 @@ class AppState extends ChangeNotifier {
   /// 记录一次经期。
   ///
   /// [ongoing] = true：今天开始、尚未结束，endDate 留空；
-  /// [ongoing] = false：补录历史日期，直接记为一天的完整周期，
+  /// [ongoing] = false：补录历史日期，[endDate] 缺省时记为一天的完整周期，
   /// 避免出现「开始于很久以前却仍在进行中」的畸形数据。
   ///
   /// 返回 null 表示成功；否则返回可直接展示给用户的中文提示。
@@ -225,16 +225,18 @@ class AppState extends ChangeNotifier {
     required int overallFlow,
     required int overallCramp,
     bool ongoing = true,
+    DateTime? endDate,
   }) async {
     if (ongoing && ongoingCycle != null) {
       return '已经有一次进行中的经期了，请先点「经期结束」。';
     }
 
     // 统一校验：不得与已有记录重叠（开始日选择器允许选历史日期，必须拦住）。
+    final end = ongoing ? null : (endDate ?? startDate);
     final error = validateCycleRange(
       cycles: _cycles,
       start: startDate,
-      end: ongoing ? null : startDate,
+      end: end,
       today: _clock(),
       allowOngoing: ongoing,
     );
@@ -242,7 +244,7 @@ class AppState extends ChangeNotifier {
 
     await _cycleRepo.insertCycle(Cycle(
       startDate: startDate,
-      endDate: ongoing ? null : startDate,
+      endDate: end,
       overallFlow: overallFlow,
       overallCramp: overallCramp,
     ));

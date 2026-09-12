@@ -15,6 +15,7 @@ class MonthCalendar extends StatelessWidget {
     required this.today,
     required this.onDayTap,
     required this.onChangeMonth,
+    this.selectedStart,
   });
 
   final DateTime month;
@@ -23,6 +24,9 @@ class MonthCalendar extends StatelessWidget {
   final DateTime today;
   final ValueChanged<DateTime> onDayTap;
   final ValueChanged<DateTime> onChangeMonth;
+
+  /// 两段式补录中已选定的开始日（用于高亮提示）。
+  final DateTime? selectedStart;
 
   static const _weekLabels = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -43,6 +47,7 @@ class MonthCalendar extends StatelessWidget {
         date: date,
         mark: _markFor(date),
         isToday: isSameDay(date, today),
+        isSelected: selectedStart != null && isSameDay(date, selectedStart!),
         onTap: () => onDayTap(date),
       ));
     }
@@ -142,12 +147,14 @@ class _DayCell extends StatelessWidget {
     required this.date,
     required this.mark,
     required this.isToday,
+    required this.isSelected,
     required this.onTap,
   });
 
   final DateTime date;
   final _DayMark mark;
   final bool isToday;
+  final bool isSelected;
   final VoidCallback onTap;
 
   Color? get _fill {
@@ -180,16 +187,18 @@ class _DayCell extends StatelessWidget {
           decoration: BoxDecoration(
             color: fill,
             borderRadius: BorderRadius.circular(10),
-            border: isToday
-                ? Border.all(color: theme.colorScheme.primary, width: 1.5)
-                : null,
+            border: isSelected
+                ? Border.all(color: theme.colorScheme.primary, width: 2.5)
+                : isToday
+                    ? Border.all(color: theme.colorScheme.primary, width: 1.5)
+                    : null,
           ),
           child: Center(
             child: Text(
               '${date.day}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: onFill ? Colors.white : theme.colorScheme.onSurface,
-                fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w400,
               ),
             ),
           ),
