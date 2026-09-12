@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuejingben/domain/entities/cycle.dart';
-import 'package:yuejingben/domain/stats/cycle_stats.dart';
+import 'package:menstrual_book/domain/entities/cycle.dart';
+import 'package:menstrual_book/domain/stats/cycle_stats.dart';
 
 void main() {
   const calc = CycleStatsCalculator();

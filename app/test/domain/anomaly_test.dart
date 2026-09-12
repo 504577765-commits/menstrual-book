@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuejingben/domain/entities/cycle.dart';
-import 'package:yuejingben/domain/prediction/anomaly.dart';
+import 'package:menstrual_book/domain/entities/cycle.dart';
+import 'package:menstrual_book/domain/prediction/anomaly.dart';
 
 void main() {
   const evaluator = AnomalyEvaluator();

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuejingben/domain/prediction/dnd.dart';
+import 'package:menstrual_book/domain/prediction/dnd.dart';
 
 void main() {
   group('isInDndWindow', () {

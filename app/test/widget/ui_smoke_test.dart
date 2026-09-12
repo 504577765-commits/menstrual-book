@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuejingben/domain/entities/cycle.dart';
-import 'package:yuejingben/domain/prediction/prediction_engine.dart';
-import 'package:yuejingben/presentation/widgets/countdown_card.dart';
-import 'package:yuejingben/presentation/widgets/level_widgets.dart';
-import 'package:yuejingben/presentation/widgets/month_calendar.dart';
+import 'package:menstrual_book/domain/entities/cycle.dart';
+import 'package:menstrual_book/domain/prediction/prediction_engine.dart';
+import 'package:menstrual_book/presentation/widgets/countdown_card.dart';
+import 'package:menstrual_book/presentation/widgets/level_widgets.dart';
+import 'package:menstrual_book/presentation/widgets/month_calendar.dart';
 
 /// 把组件放进最小可运行环境；scale 用于验证大字号下不会布局溢出
 /// （RenderFlex overflow 在测试中会直接抛错，能让测试失败）。

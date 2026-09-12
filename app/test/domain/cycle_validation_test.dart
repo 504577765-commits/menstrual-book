@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuejingben/domain/entities/cycle.dart';
-import 'package:yuejingben/domain/validation/cycle_validation.dart';
+import 'package:menstrual_book/domain/entities/cycle.dart';
+import 'package:menstrual_book/domain/validation/cycle_validation.dart';
 
 void main() {
   final today = DateTime(2026, 3, 15);

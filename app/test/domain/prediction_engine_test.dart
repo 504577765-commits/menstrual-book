@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuejingben/domain/entities/cycle.dart';
-import 'package:yuejingben/domain/prediction/prediction_engine.dart';
+import 'package:menstrual_book/domain/entities/cycle.dart';
+import 'package:menstrual_book/domain/prediction/prediction_engine.dart';
 
 void main() {
   const engine = PredictionEngine();

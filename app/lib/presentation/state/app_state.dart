@@ -4,9 +4,11 @@
 import 'package:flutter/foundation.dart';
 
 import '../../data/repositories/cycle_repository.dart';
+import '../../data/repositories/daily_record_repository.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../domain/entities/cycle.dart';
 import '../../domain/entities/cycle_day.dart';
+import '../../domain/entities/daily_record.dart';
 import '../../domain/prediction/anomaly.dart';
 import '../../domain/prediction/prediction_engine.dart';
 import '../../domain/prediction/reminder_plan.dart';
@@ -20,15 +22,18 @@ class AppState extends ChangeNotifier {
     required CycleRepository cycleRepo,
     required SettingsRepository settingsRepo,
     required NotificationService notifications,
+    required DailyRecordRepository dailyRepo,
     DateTime Function()? clock,
   })  : _cycleRepo = cycleRepo,
         _settingsRepo = settingsRepo,
         _notifications = notifications,
+        _dailyRepo = dailyRepo,
         _clock = clock ?? DateTime.now;
 
   final CycleRepository _cycleRepo;
   final SettingsRepository _settingsRepo;
   final NotificationService _notifications;
+  final DailyRecordRepository _dailyRepo;
   final DateTime Function() _clock;
 
   static const _engine = PredictionEngine();
@@ -49,6 +54,17 @@ class AppState extends ChangeNotifier {
 
   final Map<int, List<CycleDay>> _days = {};
   List<CycleDay> daysOf(int cycleId) => _days[cycleId] ?? const [];
+
+  /// 按日期聚合的六类日常记录（key：YYYY-MM-DD）。
+  Map<String, DailyRecords> _dailyRecords = {};
+
+  /// 某一天的六类记录聚合。
+  DailyRecords dailyOf(DateTime date) =>
+      _dailyRecords[_dateKey(date)] ?? DailyRecords.empty;
+
+  static String _dateKey(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   ReminderSettings _reminders = const ReminderSettings();
   ReminderSettings get reminders => _reminders;
@@ -147,6 +163,7 @@ class AppState extends ChangeNotifier {
       );
 
       await _reloadCycles();
+      await _reloadDailyRecords();
       _loadError = null;
     } catch (error) {
       // 最常见原因：数据库口令保存在 Keystore 中，用户移除手机锁屏凭据后无法解密。
@@ -174,6 +191,37 @@ class AppState extends ChangeNotifier {
       if (id == null) continue;
       _days[id] = await _cycleRepo.daysOfCycle(id);
     }
+  }
+
+  /// 全量加载六类日常记录并按天聚合（数据量小，全量内存化最简单可靠）。
+  Future<void> _reloadDailyRecords() async {
+    final builders = <String, _DailyBuilder>{};
+    void put(DateTime date, void Function(_DailyBuilder b) mutate) {
+      final key = _dateKey(date);
+      mutate(builders.putIfAbsent(key, _DailyBuilder.new));
+    }
+
+    for (final r in await _dailyRepo.allIntimacies()) {
+      put(r.date, (b) => b.intimacies.add(r));
+    }
+    for (final r in await _dailyRepo.allSymptoms()) {
+      put(r.date, (b) => b.symptoms.add(r));
+    }
+    for (final r in await _dailyRepo.allMoods()) {
+      put(r.date, (b) => b.mood = r);
+    }
+    for (final r in await _dailyRepo.allWeights()) {
+      put(r.date, (b) => b.weight = r);
+    }
+    for (final r in await _dailyRepo.allDischarges()) {
+      put(r.date, (b) => b.discharge = r);
+    }
+    for (final r in await _dailyRepo.allDiaries()) {
+      put(r.date, (b) => b.diaries.add(r));
+    }
+    _dailyRecords = {
+      for (final e in builders.entries) e.key: e.value.build(),
+    };
   }
 
   Future<void> completeOnboarding({
@@ -249,11 +297,89 @@ class AppState extends ChangeNotifier {
       debugPrint('刷新经期数据失败：$error');
     }
     try {
+      await _reloadDailyRecords();
+    } catch (error) {
+      debugPrint('刷新日常记录失败：$error');
+    }
+    try {
       await _rescheduleReminders();
     } catch (error) {
       debugPrint('重排提醒失败：$error');
     }
     notifyListeners();
+  }
+
+  // ---------- 六类日常记录写操作（全部落库后走统一刷新） ----------
+  Future<void> saveIntimacy(IntimacyRecord r) async {
+    if (r.id == null) {
+      await _dailyRepo.insertIntimacy(r);
+    } else {
+      await _dailyRepo.updateIntimacy(r);
+    }
+    await _safeRefresh();
+  }
+
+  Future<void> deleteIntimacy(int id) async {
+    await _dailyRepo.deleteIntimacy(id);
+    await _safeRefresh();
+  }
+
+  Future<void> saveSymptom(SymptomRecord r) async {
+    if (r.id == null) {
+      await _dailyRepo.insertSymptom(r);
+    } else {
+      await _dailyRepo.updateSymptom(r);
+    }
+    await _safeRefresh();
+  }
+
+  Future<void> deleteSymptom(int id) async {
+    await _dailyRepo.deleteSymptom(id);
+    await _safeRefresh();
+  }
+
+  Future<void> saveMood(MoodRecord r) async {
+    await _dailyRepo.upsertMood(r);
+    await _safeRefresh();
+  }
+
+  Future<void> deleteMoodOn(DateTime date) async {
+    await _dailyRepo.deleteMoodByDate(date);
+    await _safeRefresh();
+  }
+
+  Future<void> saveWeight(WeightRecord r) async {
+    await _dailyRepo.upsertWeight(r);
+    await _safeRefresh();
+  }
+
+  Future<void> deleteWeightOn(DateTime date) async {
+    await _dailyRepo.deleteWeightByDate(date);
+    await _safeRefresh();
+  }
+
+  Future<void> saveDischarge(DischargeRecord r) async {
+    await _dailyRepo.upsertDischarge(r);
+    await _safeRefresh();
+  }
+
+  Future<void> deleteDischargeOn(DateTime date) async {
+    await _dailyRepo.deleteDischargeByDate(date);
+    await _safeRefresh();
+  }
+
+  Future<void> saveDiary(DiaryEntry r) async {
+    if (r.id == null) {
+      await _dailyRepo.insertDiary(r);
+    } else {
+      await _dailyRepo.updateDiary(r);
+    }
+    await _safeRefresh();
+  }
+
+  Future<void> deleteDiary(int id) async {
+    await _dailyRepo.deleteDiary(id);
+    await _safeRefresh();
   }
 
   /// 结束当前进行中的经期。
@@ -396,4 +522,23 @@ enum ThemeModeSetting {
         ThemeModeSetting.light => '浅色',
         ThemeModeSetting.dark => '深色',
       };
+}
+
+/// 构建某一天的记录聚合（仅内存使用）。
+class _DailyBuilder {
+  final List<IntimacyRecord> intimacies = [];
+  final List<SymptomRecord> symptoms = [];
+  MoodRecord? mood;
+  WeightRecord? weight;
+  DischargeRecord? discharge;
+  final List<DiaryEntry> diaries = [];
+
+  DailyRecords build() => DailyRecords(
+        intimacies: List.unmodifiable(intimacies),
+        symptoms: List.unmodifiable(symptoms),
+        mood: mood,
+        weight: weight,
+        discharge: discharge,
+        diaries: List.unmodifiable(diaries),
+      );
 }

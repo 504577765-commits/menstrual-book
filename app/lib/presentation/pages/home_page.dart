@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/cycle.dart';
+import '../../domain/entities/cycle_day.dart';
 import '../../domain/prediction/anomaly.dart';
 import '../../domain/util/dates.dart';
 import '../providers.dart';
@@ -159,11 +160,77 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
 
     if (owner == null) {
-      // 两段式补录：
-      // 第一次点击选定开始日（再次点击同一天可取消）；
-      // 第二次点击选定结束日，随后弹出面板选择整体流量与痛经后保存。
+      // 两段式补录进行中：第二次点击选定结束日（再次点击同一天可取消）。
       final pending = _pendingStart;
-      if (pending == null) {
+      if (pending != null) {
+        setState(() => _pendingStart = null);
+        if (isSameDay(date, pending)) {
+          _snack(context, '已取消补录');
+          return;
+        }
+
+        final start = date.isBefore(pending) ? date : pending;
+        final end = date.isBefore(pending) ? pending : date;
+        final result = await Navigator.of(context).push<BackfillResult>(
+          sheetRoute(BackfillSheet(
+            start: start,
+            end: end,
+            others: state.cycles,
+            today: state.today,
+          )),
+        );
+        if (result == null || !context.mounted) return;
+
+        try {
+          final days = end.difference(start).inDays + 1;
+          final error = await state.startPeriod(
+            startDate: result.start,
+            overallFlow: result.flow,
+            overallCramp: result.cramp,
+            ongoing: false,
+            endDate: result.end,
+          );
+          if (!context.mounted) return;
+          _snack(context, error ?? '已补录为经期 $days 天');
+        } catch (e) {
+          if (!context.mounted) return;
+          _snack(context, '补录失败：$e');
+        }
+        return;
+      }
+
+      // 非经期日：让用户选择「补录经期」或「记录当天日常」。
+      final choice = await showModalBottomSheet<_DayAction>(
+        context: context,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppTheme.sheetRadius),
+          ),
+        ),
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit_note),
+                title: const Text('记录当天日常'),
+                subtitle: const Text('爱爱、症状、心情、体重、白带、日记'),
+                onTap: () => Navigator.pop(ctx, _DayAction.record),
+              ),
+              ListTile(
+                leading: const Icon(Icons.schedule),
+                title: const Text('补录经期'),
+                subtitle: const Text('把选中的区间记为一段经期'),
+                onTap: () => Navigator.pop(ctx, _DayAction.backfill),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (!context.mounted || choice == null) return;
+
+      if (choice == _DayAction.backfill) {
         setState(() => _pendingStart = date);
         _snack(
           context,
@@ -172,63 +239,114 @@ class _HomePageState extends ConsumerState<HomePage> {
         return;
       }
 
-      setState(() => _pendingStart = null);
-      if (isSameDay(date, pending)) {
-        _snack(context, '已取消补录');
-        return;
-      }
-
-      final start = date.isBefore(pending) ? date : pending;
-      final end = date.isBefore(pending) ? pending : date;
-      final result = await Navigator.of(context).push<BackfillResult>(
-        sheetRoute(BackfillSheet(
-          start: start,
-          end: end,
-          others: state.cycles,
-          today: state.today,
-        )),
+      await _openDayDetail(
+        context,
+        ref,
+        date,
+        fallbackFlow: FlowLevel.medium,
+        fallbackCramp: CrampLevel.none,
+        showFlowControls: false,
       );
-      if (result == null || !context.mounted) return;
-
-      try {
-        final days = end.difference(start).inDays + 1;
-        final error = await state.startPeriod(
-          startDate: result.start,
-          overallFlow: result.flow,
-          overallCramp: result.cramp,
-          ongoing: false,
-          endDate: result.end,
-        );
-        if (!context.mounted) return;
-        _snack(context, error ?? '已补录为经期 $days 天');
-      } catch (e) {
-        if (!context.mounted) return;
-        _snack(context, '补录失败：$e');
-      }
       return;
     }
 
-    final activeCycle = owner;
-    final existing = state
-        .daysOf(activeCycle.id ?? -1)
-        .where((d) => isSameDay(d.date, date))
-        .toList();
-    final day = existing.isEmpty ? null : existing.first;
+    await _openDayDetail(
+      context,
+      ref,
+      date,
+      owner: owner,
+      fallbackFlow: owner.overallFlow,
+      fallbackCramp: owner.overallCramp,
+    );
+  }
+
+  /// 打开某天的详情弹层（六类日常记录 + 经期日的流量/痛经），并处理保存结果。
+  Future<void> _openDayDetail(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime date, {
+    Cycle? owner,
+    required int fallbackFlow,
+    required int fallbackCramp,
+    bool showFlowControls = true,
+  }) async {
+    final state = ref.read(appStateProvider);
+
+    final dayRows = owner == null
+        ? const <CycleDay>[]
+        : state
+            .daysOf(owner.id ?? -1)
+            .where((d) => isSameDay(d.date, date))
+            .toList();
+    final day = dayRows.isEmpty ? null : dayRows.first;
 
     final result = await Navigator.of(context).push<DayDetailResult>(
       sheetRoute(DayDetailSheet(
         date: date,
         initialFlow: day?.flowLevel,
         initialCramp: day?.crampLevel,
-        fallbackFlow: activeCycle.overallFlow,
-        fallbackCramp: activeCycle.overallCramp,
+        fallbackFlow: fallbackFlow,
+        fallbackCramp: fallbackCramp,
+        daily: state.dailyOf(date),
+        showFlowControls: showFlowControls,
+        actions: DailyRecordActions(
+          saveIntimacy: (r) async {
+            await state.saveIntimacy(r);
+            return state.dailyOf(date);
+          },
+          deleteIntimacy: (id) async {
+            await state.deleteIntimacy(id);
+            return state.dailyOf(date);
+          },
+          saveSymptom: (r) async {
+            await state.saveSymptom(r);
+            return state.dailyOf(date);
+          },
+          deleteSymptom: (id) async {
+            await state.deleteSymptom(id);
+            return state.dailyOf(date);
+          },
+          saveMood: (r) async {
+            await state.saveMood(r);
+            return state.dailyOf(date);
+          },
+          deleteMood: (d) async {
+            await state.deleteMoodOn(d);
+            return state.dailyOf(date);
+          },
+          saveWeight: (r) async {
+            await state.saveWeight(r);
+            return state.dailyOf(date);
+          },
+          deleteWeight: (d) async {
+            await state.deleteWeightOn(d);
+            return state.dailyOf(date);
+          },
+          saveDischarge: (r) async {
+            await state.saveDischarge(r);
+            return state.dailyOf(date);
+          },
+          deleteDischarge: (d) async {
+            await state.deleteDischargeOn(d);
+            return state.dailyOf(date);
+          },
+          saveDiary: (r) async {
+            await state.saveDiary(r);
+            return state.dailyOf(date);
+          },
+          deleteDiary: (id) async {
+            await state.deleteDiary(id);
+            return state.dailyOf(date);
+          },
+        ),
       )),
     );
 
-    if (result == null || result.isNoop) return;
+    // 非经期日（仅记录日常）或用户未做经期相关的改动时，无流量/痛经可保存。
+    if (result == null || result.isNoop || owner == null) return;
     try {
       await state.saveDay(
-        cycle: activeCycle,
+        cycle: owner,
         date: date,
         flow: result.flow,
         cramp: result.cramp,
@@ -243,6 +361,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 }
+
+/// 非经期日点击弹出的操作选择。
+enum _DayAction { record, backfill }
 
 class _AnomalyBanner extends StatelessWidget {
   const _AnomalyBanner({required this.anomalies});

@@ -9,11 +9,73 @@ class AppDatabase {
   final Future<String> _passwordFuture;
 
   static const String dbFileName = 'yuejingben.db';
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   static const String tableCycle = 'cycle';
   static const String tableCycleDay = 'cycle_day';
   static const String tableSettings = 'settings';
+  static const String tableIntimacy = 'intimacy';
+  static const String tableSymptom = 'symptom';
+  static const String tableMood = 'mood';
+  static const String tableWeight = 'weight';
+  static const String tableDischarge = 'discharge';
+  static const String tableDiary = 'diary';
+
+  /// v2 新增的六张记录表（爱爱/症状/心情/体重/白带/日记）。
+  static const List<String> _extraTableSql = [
+    '''
+    CREATE TABLE IF NOT EXISTS $tableIntimacy (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      protected INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )''',
+    '''
+    CREATE TABLE IF NOT EXISTS $tableSymptom (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      symptom INTEGER NOT NULL,
+      severity INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      updated_at TEXT NOT NULL
+    )''',
+    '''
+    CREATE TABLE IF NOT EXISTS $tableMood (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      emotions TEXT,
+      note TEXT,
+      updated_at TEXT NOT NULL
+    )''',
+    '''
+    CREATE TABLE IF NOT EXISTS $tableWeight (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL UNIQUE,
+      kg REAL NOT NULL,
+      updated_at TEXT NOT NULL
+    )''',
+    '''
+    CREATE TABLE IF NOT EXISTS $tableDischarge (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL UNIQUE,
+      status INTEGER NOT NULL,
+      amount INTEGER NOT NULL DEFAULT 1,
+      smell INTEGER NOT NULL DEFAULT 0,
+      itch INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      updated_at TEXT NOT NULL
+    )''',
+    '''
+    CREATE TABLE IF NOT EXISTS $tableDiary (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      content TEXT NOT NULL,
+      images TEXT,
+      updated_at TEXT NOT NULL
+    )''',
+  ];
 
   Database? _db;
 
@@ -100,7 +162,18 @@ class AppDatabase {
         batch.execute(
           'CREATE INDEX idx_cycle_start ON $tableCycle(start_date)',
         );
+        for (final sql in _extraTableSql) {
+          batch.execute(sql);
+        }
         await batch.commit(noResult: true);
+      },
+      // v1 → v2：为老用户原地新增六张记录表（旧表不动，数据不丢）。
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          for (final sql in _extraTableSql) {
+            await db.execute(sql);
+          }
+        }
       },
     );
     _db = db;

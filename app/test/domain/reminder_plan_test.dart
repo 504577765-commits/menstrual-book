@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuejingben/domain/entities/cycle.dart';
-import 'package:yuejingben/domain/entities/reminder_settings.dart';
-import 'package:yuejingben/domain/prediction/prediction_engine.dart';
-import 'package:yuejingben/domain/prediction/reminder_plan.dart';
-import 'package:yuejingben/services/notification_service.dart';
+import 'package:menstrual_book/domain/entities/cycle.dart';
+import 'package:menstrual_book/domain/entities/reminder_settings.dart';
+import 'package:menstrual_book/domain/prediction/prediction_engine.dart';
+import 'package:menstrual_book/domain/prediction/reminder_plan.dart';
+import 'package:menstrual_book/services/notification_service.dart';
 
 void main() {
   const engine = PredictionEngine();

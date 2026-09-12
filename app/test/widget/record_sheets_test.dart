@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yuejingben/domain/entities/cycle.dart';
-import 'package:yuejingben/presentation/widgets/record_sheets.dart';
+import 'package:menstrual_book/domain/entities/cycle.dart';
+import 'package:menstrual_book/presentation/widgets/record_sheets.dart';
 
 /// 打开一个底部弹层，收集其返回值。
 class SheetHost<T> {
@@ -135,6 +135,31 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('非经期日模式（showFlowControls=false）隐藏流量区，返回 noop', (tester) async {
+      final host = await openSheet<DayDetailResult>(
+        tester,
+        DayDetailSheet(
+          date: DateTime(2026, 3, 20),
+          initialFlow: null,
+          initialCramp: null,
+          fallbackFlow: 1,
+          fallbackCramp: 0,
+          showFlowControls: false,
+        ),
+      );
+
+      expect(find.text('当日流量'), findsNothing);
+      expect(find.text('当日痛经'), findsNothing);
+      expect(find.text('完成'), findsOneWidget);
+
+      await tester.tap(find.text('完成'));
+      await tester.pumpAndSettle();
+
+      expect(host.closed, isTrue);
+      expect(host.result, isNotNull);
+      expect(host.result!.isNoop, isTrue);
     });
   });
 
